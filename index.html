@@ -239,6 +239,9 @@ function createChoiceHTML(choice) {
 }
 
 // --------- RENDER FUNCTION ---------
+// global variable to store the restart handler
+let restartHandler = null;
+
 function render(passageName) {
   const p = story[passageName];
   const container = document.getElementById("passage");
@@ -264,31 +267,31 @@ function render(passageName) {
     container.appendChild(div.firstChild);
   });
 
-  // CHOICE CLICK LISTENERS
+  // add click listeners for choices
   container.querySelectorAll('.choice').forEach((el, idx) => {
     el.addEventListener('click', () => render(p.choices[idx].next));
   });
 
   // >>> ENDING CRUMBLE EFFECT + TAP TO RESTART
   if (passageName === "ending") {
-  requestAnimationFrame(() => {
-    startCrumbleEffect(1000);
+    requestAnimationFrame(() => startCrumbleEffect(1000));
 
-    // remove any previous listeners first
-    document.body.replaceWith(document.body.cloneNode(true));
-    const newBody = document.body;
+    // remove previous restart listener if exists
+    if (restartHandler) {
+      document.body.removeEventListener('touchstart', restartHandler);
+      document.body.removeEventListener('click', restartHandler);
+    }
 
-    // add tap/click to restart
-    const restartHandler = () => {
-      newBody.removeEventListener('touchstart', restartHandler);
-      newBody.removeEventListener('click', restartHandler);
-      render("start");
+    // create new restart handler
+    restartHandler = () => {
+      document.body.removeEventListener('touchstart', restartHandler);
+      document.body.removeEventListener('click', restartHandler);
+      render("start"); // restart story
     };
 
-    newBody.addEventListener('touchstart', restartHandler, { passive: true, capture: true });
-    newBody.addEventListener('click', restartHandler, { capture: true });
-  });
-}
+    document.body.addEventListener('touchstart', restartHandler, { passive: true, capture: true });
+    document.body.addEventListener('click', restartHandler, { capture: true });
+  }
 }
 
 // --------- GLOBAL RESTART LISTENER ---------
