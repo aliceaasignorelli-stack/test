@@ -271,21 +271,24 @@ function render(passageName) {
 
   // >>> ENDING CRUMBLE EFFECT + TAP TO RESTART
   if (passageName === "ending") {
-    // make sure DOM is ready
-    requestAnimationFrame(() => {
-      startCrumbleEffect(1000);
+  requestAnimationFrame(() => {
+    startCrumbleEffect(1000);
 
-      // add tap/click to restart
-      const restartHandler = () => {
-        document.body.removeEventListener('touchstart', restartHandler);
-        document.body.removeEventListener('click', restartHandler);
-        render("start");
-      };
+    // remove any previous listeners first
+    document.body.replaceWith(document.body.cloneNode(true));
+    const newBody = document.body;
 
-      document.body.addEventListener('touchstart', restartHandler, { passive: true, capture: true });
-      document.body.addEventListener('click', restartHandler, { capture: true });
-    });
-  }
+    // add tap/click to restart
+    const restartHandler = () => {
+      newBody.removeEventListener('touchstart', restartHandler);
+      newBody.removeEventListener('click', restartHandler);
+      render("start");
+    };
+
+    newBody.addEventListener('touchstart', restartHandler, { passive: true, capture: true });
+    newBody.addEventListener('click', restartHandler, { capture: true });
+  });
+}
 }
 
 // --------- GLOBAL RESTART LISTENER ---------
