@@ -1,162 +1,218 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Interactive Story</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
-  body {
-    background: black;
-    color: white;
-    font-family: monospace;
-    padding: 20px;
-  }
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Helvetica Neue', sans-serif;
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #000;
+  color: #fff;
+}
 
-  p {
-    margin-bottom: 30px;
-    line-height: 1.5;
-  }
+#container {
+  max-width: 600px;
+  padding: 20px;
+  text-align: center;
+}
 
-  .choice {
-    display: block;
-    margin-top: 15px;
-    cursor: pointer;
-  }
+/* ===== GLITCH EFFECT ===== */
+.glitch-wrapper {
+  position: relative;
+  display: inline-block;
+}
 
-  /* LETTER CRUMBLE EFFECT */
-  .crumble-text .letter {
-    display: inline-block;
-    transition: transform 1s ease-out;
+.glitch-wrapper.block {
+  display: block;
+  margin: 10px auto;
+}
+
+.glitch-layer {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.5;
+}
+
+.glitch-layer.red { color: #ffffff; animation: glitchRed 5s infinite; }
+.glitch-layer.green { color: #ffffff; animation: glitchGreen 5s infinite; }
+.glitch-layer.blue { color: #ffffff; animation: glitchBlue 5s infinite; }
+
+@keyframes glitchRed {
+  0% { transform: translate(0.8px, -0.8px); }
+  25% { transform: translate(-0.8px, 1.3px); }
+  50% { transform: translate(1.3px, 0.8px); }
+  75% { transform: translate(-1.3px, -0.8px); }
+  100% { transform: translate(0,0); }
+}
+
+@keyframes glitchGreen {
+  0% { transform: translate(-1.3px, 0.8px); }
+  25% { transform: translate(1.3px, -0.8px); }
+  50% { transform: translate(-0.8px, 1.3px); }
+  75% { transform: translate(0.8px, -1.3px); }
+  100% { transform: translate(0,0); }
+}
+
+@keyframes glitchBlue {
+  0% { transform: translate(1.3px, 1.3px); }
+  25% { transform: translate(-1.3px, -0.8px); }
+  50% { transform: translate(1.3px, 0.8px); }
+  75% { transform: translate(-0.8px, -1.3px); }
+  100% { transform: translate(0,0); }
+}
+
+/* ===== TOP WHITE LAYER (CRT STYLE) ===== */
+.top-layer {
+  opacity: 0.85;           
+  text-shadow: 0 0 1px #fff;
+}
+
+/* ===== MAIN TEXT ===== */
+p {
+  font-size: 1.4em;
+  line-height: 1.5em;
+  display: inline-block;
+  margin-bottom: 20px;
+}
+
+/* ===== CHOICES ===== */
+.choice {
+  display: block;
+  margin: 10px 0;
+  cursor: pointer;
+  text-align: center;
+  font-size: 1.4em;
+  line-height: 1.5em;
+}
+
+/* >>> CRUMBLE / SCATTER EFFECT */
+.crumble-text {
+  display: inline-block;
+  position: relative;
+  white-space: nowrap; /* <--- fixed: removed height:1em which hid multi-line text */
+}
+
+.letter {
+  display: inline-block;
+}
+
+/* animation applies only when class is added */
+.letter.scatter {
+  animation: disperse 60s forwards;
+}
+
+@keyframes disperse {
+  0% {
+    transform: translate(0,0) rotate(0deg) scale(1);
     opacity: 1;
   }
-
-  .crumble-text .letter.scatter {
-    transform: translate(
-      calc(var(--randX) * 200px),
-      calc(var(--randY) * 200px)
-    )
-    rotate(calc(var(--randR) * 360deg))
-    scale(calc(0.5 + var(--randS)));
+  100% {
+    transform: translate(calc(var(--randX) * 100vw), calc(var(--randY) * 100vh))
+               rotate(calc(var(--randR) * 720deg))
+               scale(calc(0.5 + var(--randS)));
     opacity: 0;
   }
-
-  /* IMPORTANT FIX — removed height:1em */
-  .crumble-text {
-    display: inline-block;
-    position: relative;
-    white-space: nowrap;
-  }
-
-  /* GLITCH LAYERS */
-  .glitch-wrapper {
-    position: relative;
-    display: inline-block;
-  }
-  .glitch-layer {
-    position: absolute;
-    top: 0; left: 0;
-    opacity: 0.2;
-    mix-blend-mode: screen;
-  }
-  .glitch-layer.red { color: red; transform: translate(1px,0); }
-  .glitch-layer.green { color: green; transform: translate(-1px,0); }
-  .glitch-layer.blue { color: blue; transform: translate(0,1px); }
+}
 
 </style>
-
 </head>
 <body>
 
-<div id="passage"></div>
+<div id="container">
+  <div id="passage"></div>
+</div>
 
 <script>
-/* ===============================
-   STORY OBJECT
-================================*/
+/* -------------------------
+   Story data (your original)
+   ------------------------- */
 const story = {
   start: {
-    text: "You are in your kitchen...",
+    text: "You are blinded by the light from outside but cannot understand if it is the sun or a street lamp. You still do not know what time it is. You're hungry anyways. You go to the kitchen. There are dirty dishes piled up in the sink.",
     choices: [
-      { text: "Look at the dishes", next: "dishes" },
-      { text: "Open the fridge", next: "fridge" }
+      { text: "Do you ignore the dishes and open the fridge instead?", next: "fridge" },
+      { text: "Do you wash the dishes?", next: "dishes" }
     ]
   },
-
   dishes: {
-    text: "The dishes are stacked and wet.",
+    text: "A glass breaks in your hands, cutting you. You look at the cut, blood is oozing out, running between your fingers, but it doesn't feel warm.",
     choices: [
-      { text: "Touch the blood", next: "blood" },
-      { text: "Go back", next: "start" }
+      { text: "Do you continue washing the dishes?", next: "blood" },
+      { text: "Do you stop and medicate yourself?", next: "blood" }
     ]
   },
-
   blood: {
-    text: "It's warm.",
+    text: "The blood doesn't stop. It's flooding the sink now. You can't stay here.",
     choices: [
-      { text: "Eat cake", next: "cake" }
+      { text: "You need to go outside.", next: "hallway" },
     ]
   },
-
   fridge: {
-    text: "The fridge is humming.",
+    text: "You open the fridge. Everything looks putrid and the smell is unbearable. ",
     choices: [
-      { text: "Look deeper", next: "fridge2" },
-      { text: "Leave", next: "start" }
+        { text: "You shut the door quickly, without eating anything.", next: "fridge2" },
     ]
   },
-
   fridge2: {
-    text: "You see something moving.",
+    text: "You are getting hungrier. You see a plate on the kitchen table. On it is a note that reads: do not eat, I will be back soon. The note is signed with a name you do not remember knowing. ",
     choices: [
-      { text: "Follow it", next: "hallway" }
+        { text: "Do you eat the slice of cake?", next: "cake" },
+        { text: "Do you leave it?", next: "cake" }
     ]
   },
-
   cake: {
-    text: "The cake tastes metallic.",
+    text: "You eat the cake but it tastes wrong, metallic, bitter. Your hunger does not fade. It sharpens. You can't stay here. You need to move.",
     choices: [
-      { text: "Keep eating", next: "eat" }
+        { text: "You need to go outside.", next: "hallway" },
     ]
   },
-
   hallway: {
-    text: "The hallway stretches endlessly.",
+    text: "You step into the hallway. You feel dizzy, walking feels weirdly tiring. Your limbs feel heavy, your breathing, short. There is a staircase on your right, an elevator on your left.",
     choices: [
-      { text: "Go to stairs", next: "stairs" }
+        { text: "Do you take the elevator?", next: "elevator" },
+        { text: "Do you go down the stairs?", next: "stairs" }
     ]
   },
-
   stairs: {
-    text: "The stairs spiral downward.",
+    text: "You are going down the stairs but cannot see an ending. You wonder if you will ever somewhere. You feel weaker than before. You stumble and hit the ground. Your vision blurs.",
     choices: [
-      { text: "Take elevator", next: "elevator" }
+      { text: "Looks like you hurt yourself.", next: "ending" },
     ]
   },
-
   elevator: {
-    text: "You hear the cables strain.",
+    text: "The doors open and you step in. Someone is already inside. They smell good, fresh. Your hunger hits again. Your mouth waters.",
     choices: [
-      { text: "Enter", next: "ending" }
+      { text: "Do you get closer to them?", next: "eat" },
+      { text: "Do you stay where you are?", next: "eat" }
     ]
   },
-
   eat: {
-    text: "You keep swallowing.",
+    text: "Your hunger takes over.",
     choices: [
-      { text: "Keep going", next: "ending" }
+      { text: "Your body acts.", next: "ending" },
     ]
   },
-
   ending: {
-    text: "Everything crumbles around you.",
+    text: "You open your eyes. You're outside.",
     choices: []
-  }
+  },
 };
 
-
-/* ===============================
-   TEXT SPLITTING + CRUMBLE EFFECT
-================================*/
+/* -------------------------
+   Helpers: split & crumble
+   ------------------------- */
 function splitIntoLetters(text) {
   return [...text].map(l => {
     if (l === " ") l = "&nbsp;";
@@ -166,7 +222,6 @@ function splitIntoLetters(text) {
 
 function startCrumbleEffect(delay = 1000) {
   const letters = document.querySelectorAll('.crumble-text .letter');
-
   letters.forEach(el => {
     el.style.setProperty('--randX', (Math.random() - 0.5) * 2);
     el.style.setProperty('--randY', (Math.random() - 0.5) * 2);
@@ -181,14 +236,15 @@ function startCrumbleEffect(delay = 1000) {
   });
 
   setTimeout(() => {
-    letters.forEach(el => el.classList.add('scatter'));
+    letters.forEach(el => {
+      el.classList.add('scatter');
+    });
   }, delay);
 }
 
-
-/* ===============================
-   GLITCH WRAPPER
-================================*/
+/* -------------------------
+   Glitch helpers
+   ------------------------- */
 function createGlitchWrapper(htmlContent, isBlock=false) {
   const blockClass = isBlock ? ' block' : '';
   return `
@@ -205,11 +261,13 @@ function createChoiceHTML(choice) {
   return `<span class="choice">${createGlitchWrapper(choice.text, true)}</span>`;
 }
 
-
-/* ===============================
-   RENDER FUNCTION
-================================*/
+/* -------------------------
+   Render function
+   ------------------------- */
 function render(passageName) {
+  // keep track of current passage (global)
+  window._currentPassage = passageName;
+
   const p = story[passageName];
   const container = document.getElementById("passage");
 
@@ -229,6 +287,7 @@ function render(passageName) {
 
   container.innerHTML = html;
 
+  // reattach choice listeners (fresh elements)
   const choiceElements = container.querySelectorAll('.choice');
   choiceElements.forEach((el, idx) => {
     el.addEventListener('click', () => {
@@ -236,25 +295,39 @@ function render(passageName) {
     });
   });
 
-  /* crumble effect */
+  /* trigger crumble for ending */
   if (passageName === "ending") startCrumbleEffect(1000);
-
-  /* restart story on tap for iPad */
-  if (passageName === "ending") {
-    const restartHandler = () => {
-      document.body.removeEventListener('touchstart', restartHandler);
-      document.body.removeEventListener('click', restartHandler);
-      render("start");
-    };
-
-    document.body.addEventListener('touchstart', restartHandler, { passive: true, capture: true });
-    document.body.addEventListener('click', restartHandler, { capture: true });
-  }
 }
 
-/* START */
+/* -------------------------
+   Single global restart listener
+   ------------------------- */
+(function installGlobalRestart() {
+  // guard to avoid double-restaring in quick succession
+  let restarting = false;
+
+  function tryRestart() {
+    if (restarting) return;
+    if (window._currentPassage === "ending") {
+      restarting = true;
+      // small delay so any immediate visual feedback from the tap doesn't race
+      setTimeout(() => {
+        render("start");
+        // allow restarts again after a short cooldown
+        setTimeout(() => { restarting = false; }, 200);
+      }, 0);
+    }
+  }
+
+  // Listen once (global). Works for iPad (touchstart) and desktop (click)
+  document.body.addEventListener('touchstart', tryRestart, { passive: true });
+  document.body.addEventListener('click', tryRestart);
+})();
+
+/* -------------------------
+   Initialize
+   ------------------------- */
 render("start");
 </script>
-
 </body>
 </html>
