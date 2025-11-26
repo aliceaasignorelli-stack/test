@@ -101,14 +101,13 @@ p {
 .crumble-text {
   display: inline-block;
   position: relative;
-  white-space: nowrap; /* <--- fixed: removed height:1em which hid multi-line text */
+  white-space: nowrap;
 }
 
 .letter {
   display: inline-block;
 }
 
-/* animation applies only when class is added */
 .letter.scatter {
   animation: disperse 60s forwards;
 }
@@ -125,19 +124,15 @@ p {
     opacity: 0;
   }
 }
-
 </style>
 </head>
 <body>
-
 <div id="container">
   <div id="passage"></div>
 </div>
 
 <script>
-/* -------------------------
-   Story data (your original)
-   ------------------------- */
+// --------- STORY DATA ---------
 const story = {
   start: {
     text: "You are blinded by the light from outside but cannot understand if it is the sun or a street lamp. You still do not know what time it is. You're hungry anyways. You go to the kitchen. There are dirty dishes piled up in the sink.",
@@ -160,13 +155,13 @@ const story = {
     ]
   },
   fridge: {
-    text: "You open the fridge. Everything looks putrid and the smell is unbearable. ",
+    text: "You open the fridge. Everything looks putrid and the smell is unbearable.",
     choices: [
         { text: "You shut the door quickly, without eating anything.", next: "fridge2" },
     ]
   },
   fridge2: {
-    text: "You are getting hungrier. You see a plate on the kitchen table. On it is a note that reads: do not eat, I will be back soon. The note is signed with a name you do not remember knowing. ",
+    text: "You are getting hungrier. You see a plate on the kitchen table. On it is a note that reads: do not eat, I will be back soon. The note is signed with a name you do not remember knowing.",
     choices: [
         { text: "Do you eat the slice of cake?", next: "cake" },
         { text: "Do you leave it?", next: "cake" }
@@ -210,14 +205,9 @@ const story = {
   },
 };
 
-/* -------------------------
-   Helpers: split & crumble
-   ------------------------- */
+// --------- HELPERS ---------
 function splitIntoLetters(text) {
-  return [...text].map(l => {
-    if (l === " ") l = "&nbsp;";
-    return `<span class="letter">${l}</span>`;
-  }).join('');
+  return [...text].map(l => l === " " ? "&nbsp;" : `<span class="letter">${l}</span>`).join('');
 }
 
 function startCrumbleEffect(delay = 1000) {
@@ -227,28 +217,15 @@ function startCrumbleEffect(delay = 1000) {
     el.style.setProperty('--randY', (Math.random() - 0.5) * 2);
     el.style.setProperty('--randR', (Math.random() - 0.5) * 2);
     el.style.setProperty('--randS', Math.random());
-
-    const duration = 40 + Math.random() * 40;
-    el.style.animationDuration = duration + 's';
-
-    const animDelay = Math.random() * 20;
-    el.style.animationDelay = animDelay + 's';
+    el.style.animationDuration = (40 + Math.random() * 40) + 's';
+    el.style.animationDelay = (Math.random() * 20) + 's';
   });
-
-  setTimeout(() => {
-    letters.forEach(el => {
-      el.classList.add('scatter');
-    });
-  }, delay);
+  setTimeout(() => letters.forEach(el => el.classList.add('scatter')), delay);
 }
 
-/* -------------------------
-   Glitch helpers
-   ------------------------- */
 function createGlitchWrapper(htmlContent, isBlock=false) {
-  const blockClass = isBlock ? ' block' : '';
   return `
-    <span class="glitch-wrapper${blockClass}">
+    <span class="glitch-wrapper${isBlock ? ' block' : ''}">
       <span class="top-layer">${htmlContent}</span>
       <span class="glitch-layer red">${htmlContent}</span>
       <span class="glitch-layer green">${htmlContent}</span>
@@ -261,73 +238,44 @@ function createChoiceHTML(choice) {
   return `<span class="choice">${createGlitchWrapper(choice.text, true)}</span>`;
 }
 
-/* -------------------------
-   Render function
-   ------------------------- */
+// --------- RENDER FUNCTION ---------
 function render(passageName) {
-  // keep track of current passage (global)
   window._currentPassage = passageName;
-
   const p = story[passageName];
   const container = document.getElementById("passage");
 
-  let mainTextHTML;
-  if (passageName === "ending") {
-    const split = splitIntoLetters(p.text);
-    mainTextHTML = createGlitchWrapper(`<span class="crumble-text">${split}</span>`);
-  } else {
-    mainTextHTML = createGlitchWrapper(`<span>${p.text}</span>`);
-  }
+  let mainTextHTML = passageName === "ending" 
+    ? createGlitchWrapper(`<span class="crumble-text">${splitIntoLetters(p.text)}</span>`) 
+    : createGlitchWrapper(`<span>${p.text}</span>`);
 
   let html = `<p>${mainTextHTML}</p>`;
-
-  p.choices.forEach(c => {
-    html += createChoiceHTML(c);
-  });
+  p.choices.forEach(c => html += createChoiceHTML(c));
 
   container.innerHTML = html;
 
-  // reattach choice listeners (fresh elements)
-  const choiceElements = container.querySelectorAll('.choice');
-  choiceElements.forEach((el, idx) => {
-    el.addEventListener('click', () => {
-      render(p.choices[idx].next);
-    });
+  container.querySelectorAll('.choice').forEach((el, idx) => {
+    el.addEventListener('click', () => render(p.choices[idx].next));
   });
 
-  /* trigger crumble for ending */
   if (passageName === "ending") startCrumbleEffect(1000);
 }
 
-/* -------------------------
-   Single global restart listener
-   ------------------------- */
-(function installGlobalRestart() {
-  // guard to avoid double-restaring in quick succession
+// --------- GLOBAL RESTART LISTENER ---------
+(function() {
   let restarting = false;
-
   function tryRestart() {
-    if (restarting) return;
-    if (window._currentPassage === "ending") {
+    if (!restarting && window._currentPassage === "ending") {
       restarting = true;
-      // small delay so any immediate visual feedback from the tap doesn't race
-      setTimeout(() => {
-        render("start");
-        // allow restarts again after a short cooldown
-        setTimeout(() => { restarting = false; }, 200);
-      }, 0);
+      setTimeout(() => { render("start"); setTimeout(() => restarting=false, 200); }, 0);
     }
   }
-
-  // Listen once (global). Works for iPad (touchstart) and desktop (click)
   document.body.addEventListener('touchstart', tryRestart, { passive: true });
   document.body.addEventListener('click', tryRestart);
 })();
 
-/* -------------------------
-   Initialize
-   ------------------------- */
+// --------- INITIALIZE ---------
 render("start");
 </script>
+
 </body>
 </html>
