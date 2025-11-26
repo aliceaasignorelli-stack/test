@@ -257,7 +257,10 @@ function render(passageName) {
     el.addEventListener('click', () => render(p.choices[idx].next));
   });
 
-  if (passageName === "ending") startCrumbleEffect(1000);
+ // >>> trigger scatter effect for "ending" after delay (fixed)
+if (passageName === "ending") {
+  setTimeout(() => startCrumbleEffect(1000), 50);
+}
 }
 
 // --------- GLOBAL RESTART LISTENER ---------
