@@ -240,14 +240,11 @@ function createChoiceHTML(choice) {
 
 // --------- RENDER FUNCTION ---------
 function render(passageName) {
-  window._currentPassage = passageName;
   const p = story[passageName];
   const container = document.getElementById("passage");
-
-  // clear container first
   container.innerHTML = "";
 
-  // prepare main text
+  // MAIN TEXT
   let mainTextHTML;
   if (passageName === "ending") {
     mainTextHTML = createGlitchWrapper(`<span class="crumble-text">${splitIntoLetters(p.text)}</span>`);
@@ -255,12 +252,11 @@ function render(passageName) {
     mainTextHTML = createGlitchWrapper(`<span>${p.text}</span>`);
   }
 
-  // append main text
   const pElem = document.createElement("p");
   pElem.innerHTML = mainTextHTML;
   container.appendChild(pElem);
 
-  // append choices
+  // CHOICES
   p.choices.forEach(choice => {
     const choiceHTML = createChoiceHTML(choice);
     const div = document.createElement("div");
@@ -268,14 +264,27 @@ function render(passageName) {
     container.appendChild(div.firstChild);
   });
 
-  // add click listeners for choices
+  // CHOICE CLICK LISTENERS
   container.querySelectorAll('.choice').forEach((el, idx) => {
     el.addEventListener('click', () => render(p.choices[idx].next));
   });
 
-  // trigger crumble effect for ending after DOM is ready
+  // >>> ENDING CRUMBLE EFFECT + TAP TO RESTART
   if (passageName === "ending") {
-    requestAnimationFrame(() => startCrumbleEffect(1000));
+    // make sure DOM is ready
+    requestAnimationFrame(() => {
+      startCrumbleEffect(1000);
+
+      // add tap/click to restart
+      const restartHandler = () => {
+        document.body.removeEventListener('touchstart', restartHandler);
+        document.body.removeEventListener('click', restartHandler);
+        render("start");
+      };
+
+      document.body.addEventListener('touchstart', restartHandler, { passive: true, capture: true });
+      document.body.addEventListener('click', restartHandler, { capture: true });
+    });
   }
 }
 
