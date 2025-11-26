@@ -4,6 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
 <style>
 body {
   margin: 0;
@@ -28,6 +29,7 @@ body {
 .glitch-wrapper {
   position: relative;
   display: inline-block;
+  pointer-events: none; /* <<< FIX: glitch container never blocks taps */
 }
 
 .glitch-wrapper.block {
@@ -40,14 +42,20 @@ body {
   top: 0; left: 0;
   width: 100%;
   height: 100%;
-  pointer-events: none;
   mix-blend-mode: screen;
   opacity: 0.5;
+  pointer-events: none; /* <<< FIX: glitch layers cannot block taps */
 }
 
 .glitch-layer.red { color: #ffffff; animation: glitchRed 5s infinite; }
 .glitch-layer.green { color: #ffffff; animation: glitchGreen 5s infinite; }
 .glitch-layer.blue { color: #ffffff; animation: glitchBlue 5s infinite; }
+
+.top-layer {
+  opacity: 0.85;
+  text-shadow: 0 0 1px #fff;
+  pointer-events: auto;  /* <<< ONLY this layer receives taps */
+}
 
 @keyframes glitchRed {
   0% { transform: translate(0.8px, -0.8px); }
@@ -56,7 +64,6 @@ body {
   75% { transform: translate(-1.3px, -0.8px); }
   100% { transform: translate(0,0); }
 }
-
 @keyframes glitchGreen {
   0% { transform: translate(-1.3px, 0.8px); }
   25% { transform: translate(1.3px, -0.8px); }
@@ -64,19 +71,12 @@ body {
   75% { transform: translate(0.8px, -1.3px); }
   100% { transform: translate(0,0); }
 }
-
 @keyframes glitchBlue {
   0% { transform: translate(1.3px, 1.3px); }
   25% { transform: translate(-1.3px, -0.8px); }
   50% { transform: translate(1.3px, 0.8px); }
   75% { transform: translate(-0.8px, -1.3px); }
   100% { transform: translate(0,0); }
-}
-
-/* ===== TOP WHITE LAYER (CRT STYLE) ===== */
-.top-layer {
-  opacity: 0.85;           
-  text-shadow: 0 0 1px #fff;
 }
 
 /* ===== MAIN TEXT ===== */
@@ -126,6 +126,7 @@ p {
 }
 </style>
 </head>
+
 <body>
 <div id="container">
   <div id="passage"></div>
@@ -207,18 +208,20 @@ const story = {
 
 // --------- HELPERS ---------
 function splitIntoLetters(text) {
-  return [...text].map(l => l === " " ? "&nbsp;" : `<span class="letter">${l}</span>`).join('');
+  return [...text].map(
+    l => l === " " ? "&nbsp;" : `<span class="letter">${l}</span>`
+  ).join('');
 }
 
-function startCrumbleEffect(delay = 1000) {
+function startCrumbleEffect(delay=1000) {
   const letters = document.querySelectorAll('.crumble-text .letter');
   letters.forEach(el => {
     el.style.setProperty('--randX', (Math.random() - 0.5) * 2);
     el.style.setProperty('--randY', (Math.random() - 0.5) * 2);
     el.style.setProperty('--randR', (Math.random() - 0.5) * 2);
     el.style.setProperty('--randS', Math.random());
-    el.style.animationDuration = (40 + Math.random() * 40) + 's';
-    el.style.animationDelay = (Math.random() * 20) + 's';
+    el.style.animationDuration = (40 + Math.random()*40)+'s';
+    el.style.animationDelay = (Math.random()*20)+'s';
   });
   setTimeout(() => letters.forEach(el => el.classList.add('scatter')), delay);
 }
@@ -239,14 +242,12 @@ function createChoiceHTML(choice) {
 }
 
 // --------- RENDER FUNCTION ---------
-// global variable to store the restart handler
-let restartHandler = null; // global
+let restartHandler = null;
 
 function render(passageName) {
   const container = document.getElementById("passage");
   const p = story[passageName];
 
-  // Clear old content
   container.innerHTML = "";
 
   // MAIN TEXT
@@ -271,56 +272,341 @@ function render(passageName) {
     container.appendChild(div.firstChild);
   });
 
-  // Attach click listeners for choices
+  // CLICK LISTENERS
   container.querySelectorAll(".choice").forEach((el, idx) => {
     el.addEventListener("click", () => render(p.choices[idx].next));
   });
 
-  // ENDING: crumble + tap to restart
+  // ENDING → crumble + restart on tap
   if (passageName === "ending") {
     requestAnimationFrame(() => {
-      // Start crumble effect only on top layer
       startCrumbleEffect(1000);
 
-      // Remove old listener if exists
       if (restartHandler) {
         document.body.removeEventListener("touchstart", restartHandler);
         document.body.removeEventListener("click", restartHandler);
       }
 
-      // Create new listener
       restartHandler = () => {
-        // Remove itself
         document.body.removeEventListener("touchstart", restartHandler);
         document.body.removeEventListener("click", restartHandler);
-
-        // Restart story
         render("start");
       };
 
-      // Attach listener
-      document.body.addEventListener("touchstart", restartHandler, { passive: true, capture: true });
-      document.body.addEventListener("click", restartHandler, { capture: true });
+      document.body.addEventListener("touchstart", restartHandler, {passive:true});
+      document.body.addEventListener("click", restartHandler);
     });
   }
 }
 
-// --------- GLOBAL RESTART LISTENER ---------
-(function() {
-  let restarting = false;
-  function tryRestart() {
-    if (!restarting && window._currentPassage === "ending") {
-      restarting = true;
-      setTimeout(() => { render("start"); setTimeout(() => restarting=false, 200); }, 0);
-    }
+// --------- INITIALIZE ---------
+render("start");
+</script>
+</body>
+</html>
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<style>
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Helvetica Neue', sans-serif;
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #000;
+  color: #fff;
+}
+
+#container {
+  max-width: 600px;
+  padding: 20px;
+  text-align: center;
+}
+
+/* ===== GLITCH EFFECT ===== */
+.glitch-wrapper {
+  position: relative;
+  display: inline-block;
+  pointer-events: none; /* <<< FIX: glitch container never blocks taps */
+}
+
+.glitch-wrapper.block {
+  display: block;
+  margin: 10px auto;
+}
+
+.glitch-layer {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  mix-blend-mode: screen;
+  opacity: 0.5;
+  pointer-events: none; /* <<< FIX: glitch layers cannot block taps */
+}
+
+.glitch-layer.red { color: #ffffff; animation: glitchRed 5s infinite; }
+.glitch-layer.green { color: #ffffff; animation: glitchGreen 5s infinite; }
+.glitch-layer.blue { color: #ffffff; animation: glitchBlue 5s infinite; }
+
+.top-layer {
+  opacity: 0.85;
+  text-shadow: 0 0 1px #fff;
+  pointer-events: auto;  /* <<< ONLY this layer receives taps */
+}
+
+@keyframes glitchRed {
+  0% { transform: translate(0.8px, -0.8px); }
+  25% { transform: translate(-0.8px, 1.3px); }
+  50% { transform: translate(1.3px, 0.8px); }
+  75% { transform: translate(-1.3px, -0.8px); }
+  100% { transform: translate(0,0); }
+}
+@keyframes glitchGreen {
+  0% { transform: translate(-1.3px, 0.8px); }
+  25% { transform: translate(1.3px, -0.8px); }
+  50% { transform: translate(-0.8px, 1.3px); }
+  75% { transform: translate(0.8px, -1.3px); }
+  100% { transform: translate(0,0); }
+}
+@keyframes glitchBlue {
+  0% { transform: translate(1.3px, 1.3px); }
+  25% { transform: translate(-1.3px, -0.8px); }
+  50% { transform: translate(1.3px, 0.8px); }
+  75% { transform: translate(-0.8px, -1.3px); }
+  100% { transform: translate(0,0); }
+}
+
+/* ===== MAIN TEXT ===== */
+p {
+  font-size: 1.4em;
+  line-height: 1.5em;
+  display: inline-block;
+  margin-bottom: 20px;
+}
+
+/* ===== CHOICES ===== */
+.choice {
+  display: block;
+  margin: 10px 0;
+  cursor: pointer;
+  text-align: center;
+  font-size: 1.4em;
+  line-height: 1.5em;
+}
+
+/* >>> CRUMBLE / SCATTER EFFECT */
+.crumble-text {
+  display: inline-block;
+  position: relative;
+  white-space: nowrap;
+}
+
+.letter {
+  display: inline-block;
+}
+
+.letter.scatter {
+  animation: disperse 60s forwards;
+}
+
+@keyframes disperse {
+  0% {
+    transform: translate(0,0) rotate(0deg) scale(1);
+    opacity: 1;
   }
-  document.body.addEventListener('touchstart', tryRestart, { passive: true });
-  document.body.addEventListener('click', tryRestart);
-})();
+  100% {
+    transform: translate(calc(var(--randX) * 100vw), calc(var(--randY) * 100vh))
+               rotate(calc(var(--randR) * 720deg))
+               scale(calc(0.5 + var(--randS)));
+    opacity: 0;
+  }
+}
+</style>
+</head>
+
+<body>
+<div id="container">
+  <div id="passage"></div>
+</div>
+
+<script>
+// --------- STORY DATA ---------
+const story = {
+  start: {
+    text: "You are blinded by the light from outside but cannot understand if it is the sun or a street lamp. You still do not know what time it is. You're hungry anyways. You go to the kitchen. There are dirty dishes piled up in the sink.",
+    choices: [
+      { text: "Do you ignore the dishes and open the fridge instead?", next: "fridge" },
+      { text: "Do you wash the dishes?", next: "dishes" }
+    ]
+  },
+  dishes: {
+    text: "A glass breaks in your hands, cutting you. You look at the cut, blood is oozing out, running between your fingers, but it doesn't feel warm.",
+    choices: [
+      { text: "Do you continue washing the dishes?", next: "blood" },
+      { text: "Do you stop and medicate yourself?", next: "blood" }
+    ]
+  },
+  blood: {
+    text: "The blood doesn't stop. It's flooding the sink now. You can't stay here.",
+    choices: [
+      { text: "You need to go outside.", next: "hallway" },
+    ]
+  },
+  fridge: {
+    text: "You open the fridge. Everything looks putrid and the smell is unbearable.",
+    choices: [
+        { text: "You shut the door quickly, without eating anything.", next: "fridge2" },
+    ]
+  },
+  fridge2: {
+    text: "You are getting hungrier. You see a plate on the kitchen table. On it is a note that reads: do not eat, I will be back soon. The note is signed with a name you do not remember knowing.",
+    choices: [
+        { text: "Do you eat the slice of cake?", next: "cake" },
+        { text: "Do you leave it?", next: "cake" }
+    ]
+  },
+  cake: {
+    text: "You eat the cake but it tastes wrong, metallic, bitter. Your hunger does not fade. It sharpens. You can't stay here. You need to move.",
+    choices: [
+        { text: "You need to go outside.", next: "hallway" },
+    ]
+  },
+  hallway: {
+    text: "You step into the hallway. You feel dizzy, walking feels weirdly tiring. Your limbs feel heavy, your breathing, short. There is a staircase on your right, an elevator on your left.",
+    choices: [
+        { text: "Do you take the elevator?", next: "elevator" },
+        { text: "Do you go down the stairs?", next: "stairs" }
+    ]
+  },
+  stairs: {
+    text: "You are going down the stairs but cannot see an ending. You wonder if you will ever somewhere. You feel weaker than before. You stumble and hit the ground. Your vision blurs.",
+    choices: [
+      { text: "Looks like you hurt yourself.", next: "ending" },
+    ]
+  },
+  elevator: {
+    text: "The doors open and you step in. Someone is already inside. They smell good, fresh. Your hunger hits again. Your mouth waters.",
+    choices: [
+      { text: "Do you get closer to them?", next: "eat" },
+      { text: "Do you stay where you are?", next: "eat" }
+    ]
+  },
+  eat: {
+    text: "Your hunger takes over.",
+    choices: [
+      { text: "Your body acts.", next: "ending" },
+    ]
+  },
+  ending: {
+    text: "You open your eyes. You're outside.",
+    choices: []
+  },
+};
+
+// --------- HELPERS ---------
+function splitIntoLetters(text) {
+  return [...text].map(
+    l => l === " " ? "&nbsp;" : `<span class="letter">${l}</span>`
+  ).join('');
+}
+
+function startCrumbleEffect(delay=1000) {
+  const letters = document.querySelectorAll('.crumble-text .letter');
+  letters.forEach(el => {
+    el.style.setProperty('--randX', (Math.random() - 0.5) * 2);
+    el.style.setProperty('--randY', (Math.random() - 0.5) * 2);
+    el.style.setProperty('--randR', (Math.random() - 0.5) * 2);
+    el.style.setProperty('--randS', Math.random());
+    el.style.animationDuration = (40 + Math.random()*40)+'s';
+    el.style.animationDelay = (Math.random()*20)+'s';
+  });
+  setTimeout(() => letters.forEach(el => el.classList.add('scatter')), delay);
+}
+
+function createGlitchWrapper(htmlContent, isBlock=false) {
+  return `
+    <span class="glitch-wrapper${isBlock ? ' block' : ''}">
+      <span class="top-layer">${htmlContent}</span>
+      <span class="glitch-layer red">${htmlContent}</span>
+      <span class="glitch-layer green">${htmlContent}</span>
+      <span class="glitch-layer blue">${htmlContent}</span>
+    </span>
+  `;
+}
+
+function createChoiceHTML(choice) {
+  return `<span class="choice">${createGlitchWrapper(choice.text, true)}</span>`;
+}
+
+// --------- RENDER FUNCTION ---------
+let restartHandler = null;
+
+function render(passageName) {
+  const container = document.getElementById("passage");
+  const p = story[passageName];
+
+  container.innerHTML = "";
+
+  // MAIN TEXT
+  let mainTextHTML;
+  if (passageName === "ending") {
+    mainTextHTML = createGlitchWrapper(
+      `<span class="crumble-text">${splitIntoLetters(p.text)}</span>`
+    );
+  } else {
+    mainTextHTML = createGlitchWrapper(`<span>${p.text}</span>`);
+  }
+
+  const pElem = document.createElement("p");
+  pElem.innerHTML = mainTextHTML;
+  container.appendChild(pElem);
+
+  // CHOICES
+  p.choices.forEach(choice => {
+    const choiceHTML = createChoiceHTML(choice);
+    const div = document.createElement("div");
+    div.innerHTML = choiceHTML;
+    container.appendChild(div.firstChild);
+  });
+
+  // CLICK LISTENERS
+  container.querySelectorAll(".choice").forEach((el, idx) => {
+    el.addEventListener("click", () => render(p.choices[idx].next));
+  });
+
+  // ENDING → crumble + restart on tap
+  if (passageName === "ending") {
+    requestAnimationFrame(() => {
+      startCrumbleEffect(1000);
+
+      if (restartHandler) {
+        document.body.removeEventListener("touchstart", restartHandler);
+        document.body.removeEventListener("click", restartHandler);
+      }
+
+      restartHandler = () => {
+        document.body.removeEventListener("touchstart", restartHandler);
+        document.body.removeEventListener("click", restartHandler);
+        render("start");
+      };
+
+      document.body.addEventListener("touchstart", restartHandler, {passive:true});
+      document.body.addEventListener("click", restartHandler);
+    });
+  }
+}
 
 // --------- INITIALIZE ---------
 render("start");
 </script>
-
 </body>
 </html>
