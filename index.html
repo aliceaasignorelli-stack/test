@@ -294,17 +294,19 @@ function render(passageName) {
   if (passageName === "ending") startCrumbleEffect(1000);
 }
 
-  /* >>> trigger scatter effect for "ending" after delay */
-  if (passageName === "ending") startCrumbleEffect(1000);
+ // >>> restart story on tap (iPad/iOS compatible)
+if (passageName === "ending") {
+  const restartHandler = () => {
+    document.body.removeEventListener('touchstart', restartHandler);
+    document.body.removeEventListener('click', restartHandler);
+    render("start");
+  };
 
-  // >>> restart story when tapping anywhere on screen in the ending passage
-  if (passageName === "ending") {
-    const restartHandler = () => {
-      document.body.removeEventListener('click', restartHandler);
-      render("start");
-    };
-    document.body.addEventListener('click', restartHandler);
-  }
+  // iPad / iOS uses touchstart
+  document.body.addEventListener('touchstart', restartHandler, { passive: true });
+
+  // fallback for desktop
+  document.body.addEventListener('click', restartHandler);
 }
 
 // initialize
