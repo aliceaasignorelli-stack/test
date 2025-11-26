@@ -244,23 +244,39 @@ function render(passageName) {
   const p = story[passageName];
   const container = document.getElementById("passage");
 
-  let mainTextHTML = passageName === "ending" 
-    ? createGlitchWrapper(`<span class="crumble-text">${splitIntoLetters(p.text)}</span>`) 
-    : createGlitchWrapper(`<span>${p.text}</span>`);
+  // clear container first
+  container.innerHTML = "";
 
-  let html = `<p>${mainTextHTML}</p>`;
-  p.choices.forEach(c => html += createChoiceHTML(c));
+  // prepare main text
+  let mainTextHTML;
+  if (passageName === "ending") {
+    mainTextHTML = createGlitchWrapper(`<span class="crumble-text">${splitIntoLetters(p.text)}</span>`);
+  } else {
+    mainTextHTML = createGlitchWrapper(`<span>${p.text}</span>`);
+  }
 
-  container.innerHTML = html;
+  // append main text
+  const pElem = document.createElement("p");
+  pElem.innerHTML = mainTextHTML;
+  container.appendChild(pElem);
 
+  // append choices
+  p.choices.forEach(choice => {
+    const choiceHTML = createChoiceHTML(choice);
+    const div = document.createElement("div");
+    div.innerHTML = choiceHTML;
+    container.appendChild(div.firstChild);
+  });
+
+  // add click listeners for choices
   container.querySelectorAll('.choice').forEach((el, idx) => {
     el.addEventListener('click', () => render(p.choices[idx].next));
   });
 
- // >>> trigger scatter effect for "ending" after delay (fixed)
-if (passageName === "ending") {
-  setTimeout(() => startCrumbleEffect(1000), 50);
-}
+  // trigger crumble effect for ending after DOM is ready
+  if (passageName === "ending") {
+    requestAnimationFrame(() => startCrumbleEffect(1000));
+  }
 }
 
 // --------- GLOBAL RESTART LISTENER ---------
