@@ -240,17 +240,21 @@ function createChoiceHTML(choice) {
 
 // --------- RENDER FUNCTION ---------
 // global variable to store the restart handler
-let restartHandler = null;
+let restartHandler = null; // global
 
 function render(passageName) {
-  const p = story[passageName];
   const container = document.getElementById("passage");
+  const p = story[passageName];
+
+  // Clear old content
   container.innerHTML = "";
 
   // MAIN TEXT
   let mainTextHTML;
   if (passageName === "ending") {
-    mainTextHTML = createGlitchWrapper(`<span class="crumble-text">${splitIntoLetters(p.text)}</span>`);
+    mainTextHTML = createGlitchWrapper(
+      `<span class="crumble-text">${splitIntoLetters(p.text)}</span>`
+    );
   } else {
     mainTextHTML = createGlitchWrapper(`<span>${p.text}</span>`);
   }
@@ -267,30 +271,37 @@ function render(passageName) {
     container.appendChild(div.firstChild);
   });
 
-  // add click listeners for choices
-  container.querySelectorAll('.choice').forEach((el, idx) => {
-    el.addEventListener('click', () => render(p.choices[idx].next));
+  // Attach click listeners for choices
+  container.querySelectorAll(".choice").forEach((el, idx) => {
+    el.addEventListener("click", () => render(p.choices[idx].next));
   });
 
-  // >>> ENDING CRUMBLE EFFECT + TAP TO RESTART
+  // ENDING: crumble + tap to restart
   if (passageName === "ending") {
-    requestAnimationFrame(() => startCrumbleEffect(1000));
+    requestAnimationFrame(() => {
+      // Start crumble effect only on top layer
+      startCrumbleEffect(1000);
 
-    // remove previous restart listener if exists
-    if (restartHandler) {
-      document.body.removeEventListener('touchstart', restartHandler);
-      document.body.removeEventListener('click', restartHandler);
-    }
+      // Remove old listener if exists
+      if (restartHandler) {
+        document.body.removeEventListener("touchstart", restartHandler);
+        document.body.removeEventListener("click", restartHandler);
+      }
 
-    // create new restart handler
-    restartHandler = () => {
-      document.body.removeEventListener('touchstart', restartHandler);
-      document.body.removeEventListener('click', restartHandler);
-      render("start"); // restart story
-    };
+      // Create new listener
+      restartHandler = () => {
+        // Remove itself
+        document.body.removeEventListener("touchstart", restartHandler);
+        document.body.removeEventListener("click", restartHandler);
 
-    document.body.addEventListener('touchstart', restartHandler, { passive: true, capture: true });
-    document.body.addEventListener('click', restartHandler, { capture: true });
+        // Restart story
+        render("start");
+      };
+
+      // Attach listener
+      document.body.addEventListener("touchstart", restartHandler, { passive: true, capture: true });
+      document.body.addEventListener("click", restartHandler, { capture: true });
+    });
   }
 }
 
