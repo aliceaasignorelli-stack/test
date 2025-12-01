@@ -490,7 +490,7 @@ const story = {
   stairs: {
     text: "You keep going down the stairs but there is no end in sight. You feel weaker than before. You stumble and hit the ground. Your vision blurs.",
     choices: [
-      { text: "Looks like you hurt yourself.", next: "finale" },
+      { text: "Looks like you hurt yourself.", next: "closing" },
     ]
   },
   elevator: {
@@ -503,11 +503,17 @@ const story = {
   eat: {
     text: "Your hunger takes over.",
     choices: [
-      { text: "Your body acts.", next: "finale" },
+      { text: "Your body acts.", next: "closing" },
+    ]
+  },
+  closing: {
+    text: "You open your eyes. You're outside.",
+    choices: [
+      { text: "", next: "ending" },
     ]
   },
   ending: {
-    text: "You open your eyes. You're outside.",
+    text: "You feel it. You won't be yourself for much longer.",
     choices: [
       { text: "", next: "start" },
     ]
