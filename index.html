@@ -136,6 +136,12 @@ p {
 // --------- STORY DATA ---------
 const story = {
   start: {
+    text: "THIS IS AN INTERACTIVE NARRATIVE.",
+    choices: [
+      { text: "CLICK ON THE CHOICES YOU MAKE TO MOVE FORWARD.", next: "hunger" },
+    ]
+  },
+  hunger: {
     text: "You are hungry. You go to the kitchen. There are dirty dishes piled up in the sink.",
     choices: [
       { text: "Do you ignore the dishes and open the fridge instead?", next: "fridge" },
